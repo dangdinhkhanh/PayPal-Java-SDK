@@ -54,7 +54,7 @@ public class GetPaymentServlet extends HttpServlet {
 			// on the Payment class by passing a valid
 			// AccessToken and Payment ID
 			Payment payment = Payment.get(apiContext,
-					"PAY-0XL713371A312273YKE2GCNI");
+					"PAY-7BY32637NF4672800LM47JIY");
 			LOGGER.info("Payment retrieved ID = " + payment.getId()
 					+ ", status = " + payment.getState());
 			ResultPrinter.addResult(req, resp, "Get Payment", Payment.getLastRequest(), Payment.getLastResponse(), null);

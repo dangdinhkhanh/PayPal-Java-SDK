@@ -161,6 +161,8 @@ project(':rest-api-sample') {
         compile 'org.apache.logging.log4j:log4j-api:2.1'
         compile 'org.apache.logging.log4j:log4j-core:2.1'
         compile 'org.apache.logging.log4j:log4j-slf4j-impl:2.1'
+        compile 'org.postgresql:postgresql:42.2.2'
+        runtime 'org.postgresql:postgresql:42.2.2'
     }
 
     gretty.httpPort = Integer.valueOf(findPropertyOrDefault(JETTY_RUN_HTTP_PORT, project, 8080))
