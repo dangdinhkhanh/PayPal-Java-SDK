@@ -212,3 +212,6 @@ gradle-app.setting
 invoice.png
 rest-api-sample/out/
 rest-api-sdk/out/
+
+# Rebel 
+rebel.xml
