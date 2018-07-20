@@ -7,10 +7,11 @@ import static com.paypal.api.payments.util.SampleConstants.mode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -72,6 +73,8 @@ public class PaymentServlet extends HttpServlet {
 		APIContext apiContext = new APIContext(clientID, clientSecret, mode);
 		Payment createdPayment = null;
 
+		DatabaseManager dbm = new DatabaseManager();
+		Connection conn = dbm.connect();
 		if (req.getParameter("PayerID") != null) {
 			Payment payment = new Payment();
 			if (req.getParameter("invoiceID") != null) {
@@ -87,20 +90,25 @@ public class PaymentServlet extends HttpServlet {
 						Payment.getLastResponse(), null);
 				// TODO need to update database here
 				String state = createdPayment.getState();
-				DatabaseManager dbm = new DatabaseManager();
-				Connection conn = dbm.connect();
-				String query = "UPDATE invoice SET status = '" + state + " WHERE' INVOICEID = "
+				
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				String queryInvoice = "UPDATE invoice SET status = '" + state + "', updateddate ='"+ dateFormat.format(new Date()) + "' WHERE INVOICEID = "
+						+ req.getParameter("invoiceID");
+				
+				String queryPayment = "UPDATE payment SET status = '" + state + "', updateddate ='"+ dateFormat.format(new Date()) + "' WHERE INVOICEID = "
 						+ req.getParameter("invoiceID");
 				if (conn != null) {
 					try {
 						Statement stmt = conn.createStatement();
-						stmt.executeUpdate(query);
+						stmt.executeUpdate(queryInvoice);
+						stmt.executeUpdate(queryPayment);
 						conn.close();
 						System.out.println("Disconnected from database");
 					} catch (SQLException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-						LOGGER.info(query);
+						LOGGER.info(queryInvoice);
+						LOGGER.info(queryPayment);
 					}
 				}
 			} catch (PayPalRESTException e) {
@@ -165,6 +173,25 @@ public class PaymentServlet extends HttpServlet {
 				createdPayment = payment.create(apiContext);
 				LOGGER.info("Created payment with id = " + createdPayment.getId() + " and status = "
 						+ createdPayment.getState());
+				//### Update the status of Payment in Payment table
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				String query = "INSERT INTO Payment (InvoiceID, paymentmethod, amount, currency, status, ExternalID, createddate) VALUES ("
+						+ invoiceID + ", 'paypal'," + amount + ",'" + currency + "','" + createdPayment.getState()
+						+ "','" + createdPayment.getId() + "','" + dateFormat.format(new Date()) + "')";
+
+				if (conn != null) {
+					try {
+						Statement stmt = conn.createStatement();
+						stmt.executeUpdate(query);
+						conn.close();
+						System.out.println("Disconnected from database");
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						LOGGER.info(query);
+					}
+				}
+				
 				// ###Payment Approval Url
 				Iterator<Links> links = createdPayment.getLinks().iterator();
 				while (links.hasNext()) {
