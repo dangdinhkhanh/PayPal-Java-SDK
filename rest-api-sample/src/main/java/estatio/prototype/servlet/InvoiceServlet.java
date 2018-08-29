@@ -1,4 +1,4 @@
-package estatio.prototype.payment;
+package estatio.prototype.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import estatio.prototype.database.DatabaseManager;
+import estatio.prototype.database.InvoiceColumnName;
 
 @WebServlet(name = "InvoiceServlet", urlPatterns = { "invoice" }, loadOnStartup = 1)
 public class InvoiceServlet extends HttpServlet {

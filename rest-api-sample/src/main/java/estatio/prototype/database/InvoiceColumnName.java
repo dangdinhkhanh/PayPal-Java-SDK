@@ -1,4 +1,4 @@
-package estatio.prototype.payment;
+package estatio.prototype.database;
 
 public enum InvoiceColumnName {
 	INVOICE_ID(1), RENTEE_NAME(2), PAYMENT_METHOD(3), STATUS(4), AMOUNT(5), CURRENCY(6), CREATED_DATE(7),

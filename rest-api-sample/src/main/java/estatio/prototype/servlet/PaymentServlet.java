@@ -1,4 +1,4 @@
-package estatio.prototype.payment;
+package estatio.prototype.servlet;
 
 import static com.paypal.api.payments.util.SampleConstants.clientID;
 import static com.paypal.api.payments.util.SampleConstants.clientSecret;
@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -37,6 +38,7 @@ import com.paypal.base.rest.APIContext;
 import com.paypal.base.rest.PayPalRESTException;
 
 import estatio.prototype.database.DatabaseManager;
+import estatio.prototype.database.InvoiceColumnName;
 
 @WebServlet(name = "PaymentServlet", urlPatterns = { "payment" }, loadOnStartup = 1)
 public class PaymentServlet extends HttpServlet {
@@ -75,6 +77,7 @@ public class PaymentServlet extends HttpServlet {
 
 		DatabaseManager dbm = new DatabaseManager();
 		Connection conn = dbm.connect();
+		
 		if (req.getParameter("PayerID") != null) {
 			Payment payment = new Payment();
 			if (req.getParameter("invoiceID") != null) {
@@ -89,18 +92,31 @@ public class PaymentServlet extends HttpServlet {
 				ResultPrinter.addResult(req, resp, "Executed The Payment", Payment.getLastRequest(),
 						Payment.getLastResponse(), null);
 				// TODO need to update database here
-				String state = createdPayment.getState();
+				String paymentState = createdPayment.getState();
 				
 				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-				String queryInvoice = "UPDATE invoice SET status = '" + state + "', updateddate ='"+ dateFormat.format(new Date()) + "' WHERE INVOICEID = "
-						+ req.getParameter("invoiceID");
 				
-				String queryPayment = "UPDATE payment SET status = '" + state + "', updateddate ='"+ dateFormat.format(new Date()) + "' WHERE INVOICEID = "
+				
+				//invoice state is No Pay,  Fully Paid, Partial Paid, ... 
+				//TODO the state of invoice is not the state of payment
+				String transactionState = createdPayment.getTransactions().get(0).getRelatedResources().get(0).getSale().getState();
+				String transactionID = createdPayment.getTransactions().get(0).getRelatedResources().get(0).getSale().getId();
+				
+				//Update the state of payment (created, approved)
+				//State of transaction is completed -> thinking of adding transaction ID to the payment table 
+				String queryPayment = "UPDATE payment SET status = '" + paymentState + "', updateddate ='"+ dateFormat.format(new Date()) + "', transaction_id = '"+ transactionID+ "' WHERE INVOICEID = "
 						+ req.getParameter("invoiceID");
+				String queryInvoice = null;
+				if("completed".equals(transactionState)) {
+					queryInvoice = "UPDATE invoice SET status = 'fully paid', updateddate ='"+ dateFormat.format(new Date()) + "' WHERE INVOICEID = "
+						+ req.getParameter("invoiceID");
+				} 
 				if (conn != null) {
 					try {
 						Statement stmt = conn.createStatement();
-						stmt.executeUpdate(queryInvoice);
+						if(queryInvoice != null) {
+							stmt.executeUpdate(queryInvoice);
+						}
 						stmt.executeUpdate(queryPayment);
 						conn.close();
 						System.out.println("Disconnected from database");
@@ -117,10 +133,14 @@ public class PaymentServlet extends HttpServlet {
 			}
 		} else {
 
-			String invoiceID = req.getParameter(InvoiceColumnName.INVOICE_ID.name()).trim();
-			String amount = req.getParameter(InvoiceColumnName.AMOUNT.name()).trim();
-			String currency = req.getParameter(InvoiceColumnName.CURRENCY.name()).trim();
-			String renteeName = req.getParameter(InvoiceColumnName.RENTEE_NAME.name()).trim();
+			String invoiceID = req.getParameter(InvoiceColumnName.INVOICE_ID.name());
+			invoiceID = (invoiceID != null) ? invoiceID.trim() : invoiceID;
+			String amount = req.getParameter(InvoiceColumnName.AMOUNT.name());
+			amount = (amount != null) ? amount.trim() : amount;
+			String currency = req.getParameter(InvoiceColumnName.CURRENCY.name());
+			currency = (currency != null) ? currency.trim() : currency;
+			String renteeName = req.getParameter(InvoiceColumnName.RENTEE_NAME.name());
+			renteeName = (renteeName != null) ? renteeName.trim() : renteeName;
 			Amount ppAmount = new Amount();
 			ppAmount.setTotal(amount);
 			ppAmount.setCurrency(currency);
@@ -193,6 +213,9 @@ public class PaymentServlet extends HttpServlet {
 				}
 				
 				// ###Payment Approval Url
+				
+				
+				
 				Iterator<Links> links = createdPayment.getLinks().iterator();
 				while (links.hasNext()) {
 					Links link = links.next();
